@@ -30,7 +30,7 @@
 1. repoを配置します。
    ```bash
    sudo install -d -o "$USER" -g "$USER" /opt/myinfraservicebox
-   git clone https://github.com/<owner>/MyInfraServiceBox.git /opt/myinfraservicebox
+   git clone https://github.com/Termnix-IT/MyInfraServiceBox.git /opt/myinfraservicebox
    ```
 2. 初期設定スクリプトを実行します。初回は、LAN側のインターフェース・IPアドレス・アドレス帯を検出して`/etc/myinfraservicebox/infra.env`を作り、そこで止まります。
    ```bash
