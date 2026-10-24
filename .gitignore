@@ -1,0 +1,10 @@
+# 環境固有の値と秘密情報（サーバ上の /etc/myinfraservicebox に置く）
+.env
+*.env
+!setup/infra.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

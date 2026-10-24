@@ -1,0 +1,12 @@
+# 開発用の設定（テスト）。サーバ上の infra コマンドはパッケージとして導入せず bin/infra から動かす。
+[project]
+name = "myinfraservicebox"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"

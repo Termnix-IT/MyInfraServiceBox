@@ -1,0 +1,93 @@
+# 基盤本体（共有PostgreSQL、ソケットプロキシ、ポータル）。
+# 直接ではなく `infra core up` から起動する（infra.env と DOCKER_GID を渡すため）。
+
+services:
+  postgres:
+    image: postgres:18.6-trixie
+    container_name: infrabox-postgres
+    restart: unless-stopped
+    env_file: /etc/myinfraservicebox/secrets/postgres.env
+    volumes:
+      # PostgreSQL 18 以降のイメージは /var/lib/postgresql をボリュームにする
+      - pgdata:/var/lib/postgresql
+    networks:
+      - infra
+    # LAN には公開しない。サービスは infra ネットワーク経由で infrabox-postgres:5432 に接続する
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  socket-proxy:
+    image: wollomatic/socket-proxy:1.13.2
+    restart: unless-stopped
+    # ポータルに許可するのは、コンテナの一覧と stats の GET だけ
+    command:
+      - -loglevel=WARN
+      - -listenip=0.0.0.0
+      - -allowfrom=portal
+      - -allowGET=(/v1\.[0-9]+)?/containers/(json|[0-9a-f]{12,64}/stats)
+      - -watchdoginterval=30
+      - -stoponwatchdog
+      - -allowhealthcheck
+    user: "65534:${DOCKER_GID:?infra core up から起動してください}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-api
+    mem_limit: 32m
+    healthcheck:
+      test: ["CMD", "./healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  portal:
+    build:
+      context: .
+      dockerfile: portal/Dockerfile
+    image: infrabox-portal:local
+    restart: unless-stopped
+    depends_on:
+      - socket-proxy
+    environment:
+      HOST_ADDR: ${HOST_ADDR:?infra.env に HOST_ADDR を設定してください}
+      DOCKER_API: http://socket-proxy:2375
+      REGISTRY_PATH: /config/services.toml
+      DATA_DIR: /data
+      PORTAL_TIMEZONE: ${PORTAL_TIMEZONE:-Asia/Tokyo}
+    ports:
+      - "80:8000"
+    volumes:
+      # 台帳はマウントするので、編集してもイメージの再ビルドは要らない
+      - ./services.toml:/config/services.toml:ro
+      - /var/lib/myinfraservicebox:/data:ro
+    networks:
+      - infra
+      - docker-api
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+
+networks:
+  infra:
+    external: true
+    name: ${INFRA_NETWORK:-infra}
+  # ポータルとソケットプロキシだけが使う、外部に出られないネットワーク
+  docker-api:
+    internal: true
+
+volumes:
+  pgdata:

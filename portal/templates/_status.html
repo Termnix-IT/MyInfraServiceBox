@@ -1,0 +1,103 @@
+{% set r = snapshot.resources %}
+<p class="collected">
+  {% if snapshot.collected_at %}{{ snapshot.collected_at | localtime }} 時点{% else %}状態を収集しています…{% endif %}
+</p>
+
+{% for error in snapshot.errors %}
+<div class="notice error"><pre>{{ error }}</pre></div>
+{% endfor %}
+
+{% if r %}
+<section class="resources" aria-label="サーバのリソース">
+  <div class="tile">
+    <span class="label">CPU</span>
+    <span class="value">{{ "%.0f" | format(r.cpu_percent) }}%</span>
+    <span class="meter"><span style="width: {{ r.cpu_percent }}%"></span></span>
+    <span class="sub">{{ r.cpu_count }} コア / load {{ r.load | join(" ") }}</span>
+  </div>
+  <div class="tile">
+    <span class="label">メモリ</span>
+    <span class="value">{{ "%.0f" | format(r.memory.percent) }}%</span>
+    <span class="meter"><span style="width: {{ r.memory.percent }}%"></span></span>
+    <span class="sub">{{ r.memory.used | bytes }} / {{ r.memory.total | bytes }}</span>
+  </div>
+  <div class="tile">
+    <span class="label">ディスク</span>
+    <span class="value">{{ "%.0f" | format(r.disk.percent) }}%</span>
+    <span class="meter"><span style="width: {{ r.disk.percent }}%"></span></span>
+    <span class="sub">{{ r.disk.used | bytes }} / {{ r.disk.total | bytes }}</span>
+  </div>
+  <div class="tile">
+    <span class="label">稼働時間</span>
+    <span class="value small">{{ r.uptime_seconds | uptime }}</span>
+    <span class="sub">スワップ {{ r.swap.used | bytes }} / {{ r.swap.total | bytes }}</span>
+  </div>
+</section>
+{% endif %}
+
+<section aria-label="サービス">
+  <h2>サービス</h2>
+  {% if snapshot.collected_at and not snapshot.services %}
+  <p class="empty">表示できるサービスがありません。</p>
+  {% endif %}
+  <div class="services">
+    {% for s in snapshot.services %}
+    <article class="service {{ 'up' if s.health.ok else 'down' }}">
+      <header>
+        <span class="dot" aria-hidden="true"></span>
+        <h3>
+          {% if s.url %}<a href="{{ s.url }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}
+        </h3>
+        <span class="badge">{{ s.category }}</span>
+        {% if s.external %}<span class="badge muted">基盤外</span>{% endif %}
+      </header>
+      {% if s.description %}<p class="description">{{ s.description }}</p>{% endif %}
+      <dl>
+        <dt>状態</dt>
+        <dd>{{ "稼働中" if s.health.ok else "停止中" }}（{{ s.health.detail }}、{{ s.health.latency_ms }} ms）</dd>
+        <dt>アドレス</dt>
+        <dd><code>{{ s.address }}</code></dd>
+        {% if not s.external %}
+        <dt>動いている版</dt>
+        <dd>
+          {% if s.current %}
+          <code>{{ s.current.ref }}</code> <code>{{ s.current.commit | short }}</code>（{{ s.current.time | localtime }}）
+          {% else %}未デプロイ{% endif %}
+        </dd>
+        {% if s.last and s.last.result != "success" %}
+        <dt>直近の失敗</dt>
+        <dd class="failed">{{ s.last.time | localtime }} {{ s.last.action }} <code>{{ s.last.ref }}</code>: {{ s.last.message }}</dd>
+        {% endif %}
+        {% for c in s.containers %}
+        <dt>コンテナ</dt>
+        <dd><code>{{ c.name }}</code> {{ c.status }}{% if c.mem_used is not none %}（{{ c.mem_used | bytes }} / {{ c.mem_limit | bytes }}）{% endif %}</dd>
+        {% endfor %}
+        {% endif %}
+      </dl>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+{% if snapshot.containers %}
+<section aria-label="コンテナ">
+  <h2>コンテナ</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>プロジェクト</th><th>コンテナ</th><th>状態</th><th>メモリ</th></tr>
+      </thead>
+      <tbody>
+        {% for c in snapshot.containers %}
+        <tr class="{{ 'running' if c.state == 'running' else 'stopped' }}">
+          <td>{{ c.project or "-" }}</td>
+          <td><code>{{ c.name }}</code></td>
+          <td>{{ c.status }}</td>
+          <td>{% if c.mem_used is not none %}{{ c.mem_used | bytes }} / {{ c.mem_limit | bytes }}{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}

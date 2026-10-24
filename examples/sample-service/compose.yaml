@@ -1,0 +1,22 @@
+# 基盤に載せるサービスの compose.yaml の見本。
+# SERVICE_PORT・INFRA_NETWORK・DATABASE_URL は infra deploy が台帳から渡す。
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      # 公開ポートは台帳の port と一致している必要がある
+      - "${SERVICE_PORT:?infra deploy から起動してください}:8080"
+    environment:
+      # 台帳で database = true にした場合だけ値が入る
+      DATABASE_URL: ${DATABASE_URL:-}
+    networks:
+      - infra
+    # メモリ上限は必須。合計が台帳の memory（既定 256m）を超えるとデプロイを止める
+    mem_limit: 128m
+
+networks:
+  infra:
+    external: true
+    name: ${INFRA_NETWORK:-infra}

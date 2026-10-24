@@ -1,0 +1,5 @@
+#!/bin/sh
+# infra コマンド。/usr/local/bin/infra からシンボリックリンクで呼び出される。
+set -eu
+root="$(dirname "$(dirname "$(readlink -f "$0")")")"
+PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m infrabox.cli "$@"

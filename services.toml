@@ -1,0 +1,28 @@
+# サービス台帳。ポータルとデプロイスクリプト（infra コマンド）の両方がこのファイルを読む。
+# 書き方と項目の意味は README.md の「サービス台帳」を参照。編集したら infra check で検査する。
+
+[settings]
+# 基盤のサービスに割り当てるポートの範囲
+port_range = [8100, 8199]
+# サービスに割り当てられないポート（22: SSH、80: ポータル、25565: Minecraft）
+reserved_ports = [22, 80, 25565]
+
+[[services]]
+name = "minecraft"
+description = "Minecraft サーバ（基盤の外で不定期に稼働）"
+category = "ゲーム"
+port = 25565
+external = true
+health = { type = "tcp" }
+
+# サービスを追加するときの例:
+#
+# [[services]]
+# name = "sample"
+# description = "基盤との取り決めを満たす見本のサービス"
+# category = "検証"
+# repo = "https://github.com/<owner>/<repo>.git"
+# port = 8101
+# health = { type = "http", path = "/health" }
+# database = false
+# memory = "128m"

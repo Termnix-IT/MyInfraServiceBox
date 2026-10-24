@@ -1,0 +1,8 @@
+[Unit]
+Description=MyInfraServiceBox PostgreSQL backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=@REPO_ROOT@/bin/infra backup --keep 7
